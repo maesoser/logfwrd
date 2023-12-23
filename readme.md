@@ -89,3 +89,17 @@ start_service() {
 }
 ```
 
+## Example of a syslog trace in JSON format
+
+```json
+{
+    "client" : "127.0.0.1:56704",
+    "facility" : 10,
+    "hostname" : "01-router-mad",
+    "priority" :  86,
+    "severity" : 6,
+    "tag" : "dropbear",
+    "timestamp" : "2023-10-03T23:08:31Z",
+    "content" : "Exit before auth from 198.41.241.138:34204: Exited normally"
+}
+```
