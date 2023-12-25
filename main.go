@@ -27,12 +27,12 @@ const DEFAULT_MAX_LINES = 5000
 const DEFAULT_MAX_TIME = 300 * time.Second
 
 func randSeq(n int) string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+	letters := []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789")
+	out := make([]rune, n)
+	for i := range out {
+		out[i] = letters[rand.Intn(len(letters))]
 	}
-	return string(b)
+	return string(out)
 }
 
 // Sends syslog entries to a s3 bucket
@@ -50,6 +50,7 @@ type s3Buffer struct {
 	bucket     string
 	MaxTime    time.Duration
 	MaxLines   int
+	Tag        string
 }
 
 func (this *s3Buffer) compressedWrite(text string) error {
@@ -63,6 +64,7 @@ func (this *s3Buffer) compressedWrite(text string) error {
 // Create a new instance of the service's client with a Session.
 func (buffer *s3Buffer) Init(endpoint, bucket, region, key, secret string) {
 	buffer.Verbose = false
+	buffer.Tag = ""
 	buffer.bucket = bucket
 	buffer.awsSession = *session.Must(session.NewSession())
 	config := aws.Config{
@@ -125,12 +127,21 @@ func (buffer *s3Buffer) Send() {
 		defer cancelFn()
 	}
 
+	headers := map[string]string{}
+	if buffer.Tag != "" {
+		headers = map[string]string{"x-amz-meta-tag": buffer.Tag}
+	}
+
 	// Uploads the object to S3. The Context will interrupt the request if the timeout expires.
-	_, err := buffer.awsService.PutObjectWithContext(buffer.awsContext, &s3.PutObjectInput{
-		Bucket: aws.String(buffer.bucket),
-		Key:    aws.String(filename),
-		Body:   bytes.NewReader(buffer.buf.Bytes()),
-	})
+	_, err := buffer.awsService.PutObjectWithContext(
+		buffer.awsContext,
+		&s3.PutObjectInput{
+			Bucket: aws.String(buffer.bucket),
+			Key:    aws.String(filename),
+			Body:   bytes.NewReader(buffer.buf.Bytes()),
+		},
+		request.WithSetRequestHeaders(headers),
+	)
 	buffer.buf.Reset()
 	buffer.entries = 0
 	if err != nil {
@@ -159,6 +170,7 @@ func main() {
 	bucket := flag.String("bucket", GetEnvStr("LOGFWRD_BUCKET", ""), "Name of the S3 bucket where syslog messages are stored")
 	listenAddr := flag.String("listen", GetEnvStr("LOGFWRD_LISTEN", ":5014"), "Address for the syslog daemon to listen on")
 	region := flag.String("region", GetEnvStr("LOGFWRD_REGION", "auto"), "Region where the S3 bucket is located")
+	tag := flag.String("tag", GetEnvStr("LOGFWRD_TAG", ""), "Optional metadata string attached to the delivered files")
 	endpoint := flag.String("endpoint", GetEnvStr("LOGFWRD_ENDPOINT", ""), "URL of the S3 bucket endpoint")
 	secret := flag.String("secret", GetEnvStr("LOGFWRD_SECRET", ""), "Secret key for accessing the S3 bucket")
 	accessKey := flag.String("key", GetEnvStr("LOGFWRD_KEY", ""), "Access key for accessing the S3 bucket")
@@ -173,6 +185,7 @@ func main() {
 	buffer := s3Buffer{}
 	buffer.Init(*endpoint, *bucket, *region, *accessKey, *secret)
 	buffer.Verbose = *verbose
+	buffer.Tag = *tag
 
 	var err error
 	buffer.MaxTime, err = time.ParseDuration(*maxTime)
