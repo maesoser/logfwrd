@@ -47,12 +47,12 @@ Then we need to upload the tar file to the router and instantiate the container 
 
 ```
 /interface/veth/add name=logfwrd address=172.17.0.3/24 gateway=172.17.0.1
-/interface/bridge/port add bridge=containers interface=logfwrd_iface
-/container/envs/add name=logfwrd_envs key=LOGFWRD_BUCKET value="syslogs"
-/container/envs/add name=logfwrd_envs key=LOGFWRD_ENDPOINT value="https://r2.cloudflarestorage.com/"
-/container/envs/add name=logfwrd_envs key=LOGFWRD_SECRET value="0xdeadbeef"
-/container/envs/add name=logfwrd_envs key=LOGFWRD_KEY value="0xdeadbeef"
-/container/add file=logfwrd.tar interface=logfwrd_iface envlist=logfwrd_envs hostname=logfwrd
+/interface/bridge/port add bridge=containers interface=logfwrd
+/container/envs/add name=logfwrd key=LOGFWRD_BUCKET value="syslogs"
+/container/envs/add name=logfwrd key=LOGFWRD_ENDPOINT value="https://r2.cloudflarestorage.com/"
+/container/envs/add name=logfwrd key=LOGFWRD_SECRET value="0xdeadbeef"
+/container/envs/add name=logfwrd key=LOGFWRD_KEY value="0xdeadbeef"
+/container/add file=logfwrd.tar interface=logfwrd envlist=logfwrd hostname=logfwrd
 /ip firewall nat
 add action=dst-nat chain=dstnat dst-address=192.168.1.1 dst-port=5014 protocol=udp to-addresses=172.17.0.3 to-ports=5014
 ```

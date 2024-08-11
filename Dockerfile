@@ -1,20 +1,20 @@
-FROM golang:alpine as builder
-
-# Copy the code from the host
+FROM golang:alpine AS builder
 RUN adduser -D logfwrd
+# Copy the code from the host
 WORKDIR /
 COPY . .
-
 # Compile it
-RUN CGO_ENABLED=0 GOOS=linux go build -a \
-  -installsuffix cgo \
-  -ldflags '-extldflags "-static"' \
-  -o logfwrd .
+ENV CGO_ENABLED=0
+RUN set -xe && \
+    apk add upx && \
+    go build -ldflags='-s -w -extldflags "-static"' \
+    -o /go/bin/logfwrd && \
+    upx --lzma /go/bin/logfwrd
 
 # Create the container
-FROM scratch
-COPY --from=builder /logfwrd /app/logfwrd
+FROM alpine
+COPY --from=builder /go/bin/logfwrd /usr/bin/logfwrd
 COPY --from=0 /etc/passwd /etc/passwd
-USER logfwrd
 
-ENTRYPOINT ["/app/logfwrd"]
+USER logfwrd
+CMD /usr/bin/logfwrd
