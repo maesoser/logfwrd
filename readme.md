@@ -1,6 +1,6 @@
 # logfwrd
 
-logfwrd is a lightweight binary that forwards syslog data to an S3-compatible location periodically.
+logfwrd is a lightweight binary that forwards syslog data to an S3-compatible location or an HTTP endpoint periodically.
 
 By default, logfwrd delivers logs every 5 minutes or every 5000 records. However, these limits can be customized using CLI flags or environment variables. The logs are delivered in a gzip-compressed file with JSON formatting.
 
@@ -10,18 +10,21 @@ By default, logfwrd delivers logs every 5 minutes or every 5000 records. However
 
 ## CLI options / Environment variables
 
-| Flag         | Default | Environment variable | Meaning                                                  |
-|--------------|---------|----------------------|----------------------------------------------------------|
-| bucket       |         | LOGFWRD_BUCKET       | Name of the S3 bucket where syslog messages are stored   |
-| listen       | :5014   | LOGFWRD_LISTEN       | Address for the syslog daemon to listen on               |
-| region       | auto    | LOGFWRD_REGION       | Region where the S3 bucket is located                    |
-| endpoint     |         | LOGFWRD_ENDPOINT     | URL of the S3 bucket endpoint                            |
-| secret       |         | LOGFWRD_SECRET       | Secret key for accessing the S3 bucket                   |
-| key          |         | LOGFWRD_KEY          | Access key for accessing the S3 bucket                   |
-| max-records  | 5000    | LOGFWRD_MAX_RECORDS  | Maximum number of log lines to deliver per batch         |
-| max-interval | 5m      | LOGFWRD_MAX_INTERVAL | Maximum time interval between log deliveries             |
-| verbose      | false   |                      | Specifies whether log messages should be shown or not    |
-| tag          |         | LOGFWRD_TAG          | Optional metadata string attached to the delivered files |
+| Flag         | Default | Environment variable | Meaning                                                    |
+|--------------|---------|----------------------|------------------------------------------------------------|
+| mode         |         | LOGFWRD_MODE         | Mode of operation (s3 or http)                             |
+| bucket       |         | LOGFWRD_BUCKET       | Name of the S3 bucket where syslog messages are stored     |
+| listen       | :5014   | LOGFWRD_LISTEN       | Address for the syslog daemon to listen on                 |
+| region       | auto    | LOGFWRD_REGION       | Region where the S3 bucket is located                      |
+| endpoint     |         | LOGFWRD_ENDPOINT     | URL of the S3 bucket endpoint                              |
+| secret       |         | LOGFWRD_SECRET       | Secret key for accessing the S3 bucket                     |
+| key          |         | LOGFWRD_KEY          | Access key for accessing the S3 bucket                     |
+| max-records  | 5000    | LOGFWRD_MAX_RECORDS  | Maximum number of log lines to deliver per batch           |
+| max-interval | 5m      | LOGFWRD_MAX_INTERVAL | Maximum time interval between log deliveries               |
+| verbose      | false   |                      | Specifies whether log messages should be shown or not      |
+| tag          |         | LOGFWRD_TAG          | Optional metadata string attached to the delivered files   |
+| auth         |         | LOGFWRD_AUTH         | Optional authorization header for http receiver validation |
+
 
 ## Running the binary from the terminal
 
