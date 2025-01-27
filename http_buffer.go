@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"runtime"
 	"time"
@@ -20,22 +21,24 @@ type httpBuffer struct {
 
 // Create a new instance oaf the service's client with a Session.
 func (buffer *httpBuffer) Init(endpoint, auth string) {
+	buffer.Endpoint = endpoint
+	buffer.Auth = auth
 	buffer.Verbose = false
 	buffer.Tag = ""
-	buffer.Endpoint = endpoint
 	buffer.httpSession = http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 15 * time.Second,
 		Transport: &http.Transport{
 			MaxIdleConns:        10,
-			IdleConnTimeout:     30 * time.Second,
+			IdleConnTimeout:     15 * time.Second,
 			TLSHandshakeTimeout: 10 * time.Second,
 		},
 	}
 }
 
 func (buffer *httpBuffer) Add(text string) error {
-	req, err := http.NewRequest("POST", buffer.Endpoint, bytes.NewBuffer([]byte(text)))
+	req, err := http.NewRequest(http.MethodPost, buffer.Endpoint, bytes.NewBuffer([]byte(text)))
 	if err != nil {
+		log.Println(err)
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -54,7 +57,7 @@ func (buffer *httpBuffer) Add(text string) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode > 299 {
 		return fmt.Errorf("received non-200 response: %d", resp.StatusCode)
 	}
 	return nil

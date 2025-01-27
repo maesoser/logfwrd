@@ -45,7 +45,7 @@ func main() {
 	tag := flag.String("tag", GetEnvStr("LOGFWRD_TAG", ""), "Optional metadata string attached to the delivered files")
 
 	// HTTP export options
-	auth := flag.String("auth", GetEnvStr("LOGFWRD_AUTH_HEADER", ""), "Authorization header for accessing the HTTP endpoint")
+	auth := flag.String("auth", GetEnvStr("LOGFWRD_AUTH", ""), "Authorization header for accessing the HTTP endpoint")
 
 	// S3 export options
 	bucket := flag.String("bucket", GetEnvStr("LOGFWRD_BUCKET", ""), "Name of the S3 bucket where syslog messages are stored")
@@ -56,6 +56,48 @@ func main() {
 	maxTime := flag.String("max-interval", GetEnvStr("LOGFWRD_MAX_INTERVAL", "60s"), "Maximum time interval between log deliveries")
 
 	flag.Parse()
+
+	s3Buff := &s3Buffer{}
+	httpBuff := &httpBuffer{}
+
+	if *mode == "http" {
+		log.Println("Sending logs to HTTP endpoint")
+		checkEmptyFlags(
+			map[string]*string{
+				"HTTP endpoint URL":     endpoint,
+				"Authentication Header": auth,
+			})
+
+		httpBuff.Init(*endpoint, *auth)
+		httpBuff.Verbose = *verbose
+		httpBuff.Tag = *tag
+	} else if *mode == "s3" {
+		log.Println("Sending logs to S3 compatible endpoint")
+		checkEmptyFlags(
+			map[string]*string{
+				"Bucket Name":     bucket,
+				"S3 endpoint URL": endpoint,
+				"S3 Secret key":   secret,
+				"S3 Access Key":   accessKey,
+			})
+
+		s3Buff.Init(*endpoint, *bucket, *region, *accessKey, *secret)
+		s3Buff.Verbose = *verbose
+		s3Buff.Tag = *tag
+
+		var err error
+		s3Buff.MaxTime, err = time.ParseDuration(*maxTime)
+		if err != nil {
+			log.Panicf("Error parsing <%s>: %v", *maxTime, err)
+		}
+		s3Buff.MaxLines, err = strconv.Atoi(*maxLines)
+		if err != nil {
+			log.Panicf("Error parsing <%s>: %v", *maxLines, err)
+		}
+	} else {
+		log.Println("Error: mode is empty")
+		os.Exit(-1)
+	}
 
 	channel := make(syslog.LogPartsChannel)
 	handler := syslog.NewChannelHandler(channel)
@@ -68,59 +110,6 @@ func main() {
 		log.Printf("Syslog server listening at %s\n", *listenAddr)
 	}
 
-	var s3Forwarder *s3Buffer
-	var httpForwarder *httpBuffer
-
-	if *mode == "http" {
-		log.Println("Sending logs to HTTP endpoint")
-		buffer := &httpBuffer{}
-		buffer.Init(*endpoint, *auth)
-		buffer.Verbose = *verbose
-		buffer.Tag = *tag
-		go func(channel syslog.LogPartsChannel) {
-			for logParts := range channel {
-				delete(logParts, "tls_peer")
-				jsonString, err := json.Marshal(logParts)
-				if err != nil {
-					log.Printf("Failed to create json from syslog: %v\n", err)
-					continue
-				}
-				err = buffer.Add(string(jsonString) + "\n")
-				if err != nil {
-					log.Printf("Failed to add syslog message to buffer: %v\n", err)
-					continue
-				}
-			}
-		}(channel)
-	} else if *mode == "s3" {
-		log.Println("Sending logs to S3 compatible endpoint")
-		checkEmptyFlags(
-			map[string]*string{
-				"Bucket Name":     bucket,
-				"S3 endpoint URL": endpoint,
-				"S3 Secret key":   secret,
-				"S3 Access Key":   accessKey,
-			})
-
-		buffer := &s3Buffer{}
-		buffer.Init(*endpoint, *bucket, *region, *accessKey, *secret)
-		buffer.Verbose = *verbose
-		buffer.Tag = *tag
-
-		var err error
-		buffer.MaxTime, err = time.ParseDuration(*maxTime)
-		if err != nil {
-			log.Panicf("Error parsing <%s>: %v", *maxTime, err)
-		}
-		buffer.MaxLines, err = strconv.Atoi(*maxLines)
-		if err != nil {
-			log.Panicf("Error parsing <%s>: %v", *maxLines, err)
-		}
-	} else {
-		log.Println("Error: mode is empty")
-		os.Exit(-1)
-	}
-
 	go func(channel syslog.LogPartsChannel) {
 		for logParts := range channel {
 			delete(logParts, "tls_peer")
@@ -130,9 +119,9 @@ func main() {
 				continue
 			}
 			if *mode == "s3" {
-				err = s3Forwarder.Add(string(jsonString) + "\n")
+				err = s3Buff.Add(string(jsonString) + "\n")
 			} else {
-				err = httpForwarder.Add(string(jsonString) + "\n")
+				err = httpBuff.Add(string(jsonString) + "\n")
 			}
 			if err != nil {
 				log.Printf("Failed to add syslog message to buffer: %v\n", err)

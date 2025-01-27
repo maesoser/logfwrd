@@ -12,30 +12,47 @@ By default, logfwrd delivers logs every 5 minutes or every 5000 records. However
 
 | Flag         | Default | Environment variable | Meaning                                                    |
 |--------------|---------|----------------------|------------------------------------------------------------|
-| mode         |         | LOGFWRD_MODE         | Mode of operation (s3 or http)                             |
-| bucket       |         | LOGFWRD_BUCKET       | Name of the S3 bucket where syslog messages are stored     |
 | listen       | :5014   | LOGFWRD_LISTEN       | Address for the syslog daemon to listen on                 |
-| region       | auto    | LOGFWRD_REGION       | Region where the S3 bucket is located                      |
+| mode         |         | LOGFWRD_MODE         | Mode of operation (s3 or http)                             |
 | endpoint     |         | LOGFWRD_ENDPOINT     | URL of the S3 bucket endpoint                              |
+| tag          |         | LOGFWRD_TAG          | Optional metadata string attached to the delivered files   |
+| bucket       |         | LOGFWRD_BUCKET       | Name of the S3 bucket where syslog messages are stored     |
+| region       | auto    | LOGFWRD_REGION       | Region where the S3 bucket is located                      |
 | secret       |         | LOGFWRD_SECRET       | Secret key for accessing the S3 bucket                     |
 | key          |         | LOGFWRD_KEY          | Access key for accessing the S3 bucket                     |
 | max-records  | 5000    | LOGFWRD_MAX_RECORDS  | Maximum number of log lines to deliver per batch           |
 | max-interval | 5m      | LOGFWRD_MAX_INTERVAL | Maximum time interval between log deliveries               |
 | verbose      | false   |                      | Specifies whether log messages should be shown or not      |
-| tag          |         | LOGFWRD_TAG          | Optional metadata string attached to the delivered files   |
 | auth         |         | LOGFWRD_AUTH         | Optional authorization header for http receiver validation |
 
 
 ## Running the binary from the terminal
 
 ```bash
-logfwrd
+logfwrd \
+    - mode "s3" \
     -listen ":5014" \
     -bucket "syslogs"
     -region "auto" \
     -endpoint "https://r2.cloudflarestorage.com/" \
     -key "0xdeadbeef" \
     -secret "0xdeadbeef"
+```
+
+## Running logfwrd using
+
+```
+  logfwrd:
+    container_name: logfwrd
+    build: ./logfwrd
+    restart: unless-stopped
+    mem_limit: 64m
+    ports:
+     - "5014:5014/udp"
+    environment:
+     - LOGFWRD_MODE=http
+     - LOGFWRD_AUTH=0xdeadbeef
+     - LOGFWRD_ENDPOINT=https://syslog.example.com/
 ```
 
 ## Building and installing logfwrd for Mikrotik

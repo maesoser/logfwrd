@@ -8,19 +8,19 @@ vet:
 	go fmt
 
 build-amd64:
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-amd64' logfwrd.go
+	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-amd64' *.go
 	upx --lzma '$(BINARY_NAME)-linux-amd64'
 
 build-arm64:
-	CGO_ENABLED=0 GOARCH=arm64 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-arm64' logfwrd.go
+	CGO_ENABLED=0 GOARCH=arm64 GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-arm64' *.go
 	upx --lzma '$(BINARY_NAME)-linux-arm64'
 
 build-arm:
-	CGO_ENABLED=0 GOARCH=arm GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-arm' logfwrd.go
+	CGO_ENABLED=0 GOARCH=arm GOOS=linux go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-arm' *.go
 	upx --lzma '$(BINARY_NAME)-linux-arm'
 
 build-mips:
-	CGO_ENABLED=0 GOARCH=mips GOOS=linux GOMIPS=softfloat go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-mips' logfwrd.go
+	CGO_ENABLED=0 GOARCH=mips GOOS=linux GOMIPS=softfloat go build -ldflags '-s -w -extldflags "-static"' -o '$(BINARY_NAME)-linux-mips' *.go
 	upx --lzma '$(BINARY_NAME)-linux-mips'
 
 build-mikrotik:
